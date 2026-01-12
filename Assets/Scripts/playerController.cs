@@ -6,6 +6,7 @@ public class PlayerController : MonoBehaviour
     public static PlayerController Instance{get;private set;}
     public Transform playerBody;
     public Vector3 initialPosition;
+    public float volumn = 0.5f;
     void Awake(){
         if(Instance==null){
             Instance=this;
@@ -17,18 +18,19 @@ public class PlayerController : MonoBehaviour
     public float moveSpeed = 5f;
     public CharacterController controller; // 拖入 CharacterController 组件
     [Header("Jump & Gravity")]
-    public float gravity = -9.81f;    // 重力加速度
+    public float gravity = -20.81f;    // 重力加速度
     public float jumpHeight = 1.5f;   // 跳跃高度
     private Vector3 velocity;         // 当前的垂直速度
     private bool isGrounded;          // 是否在地面上
     public Transform gun;
 
     [Header("Mouse Look")]
-    public float mouseSensitivity = 10f;
+    public float mouseSensitivity = 2f;
     public GameObject uis;
     public Transform deathCamera;
 
     private float xRotation = 0f;
+    
 
     void Start()
     {
@@ -36,6 +38,9 @@ public class PlayerController : MonoBehaviour
         initialPosition=playerBody.position;
         // 自动获取组件（如果没拖的话）
         if (controller == null) controller = GetComponentInParent<CharacterController>();
+    }
+    public void SetUIS(bool setActive){
+        uis.SetActive(setActive);
     }
     public void Reset()
     {
@@ -87,7 +92,7 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
-        if(!Mouse.current.leftButton.wasPressedThisFrame){
+        if(!Mouse.current.leftButton.wasPressedThisFrame&&!gameStat.Instance.isPaused){
             HandleMouseLook();
         }
         HandleMovement();
@@ -164,7 +169,7 @@ public class PlayerController : MonoBehaviour
             horizontalMovement=0f;
             Debug.Log("horizontalMovement: "+horizontalMovement);
         }else{
-            horizontalMovement+=mouseX;
+            horizontalMovement+=mouseX/mouseSensitivity;
         }
         lastDirection=direction;
         float gunLastXPosition=gun.localPosition.x;

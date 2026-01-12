@@ -152,3 +152,4 @@ MonoBehaviour:
   groundY: 53.54
   sinkDuration: 30
   sinkDistance: 0.01
+  bloodSplatPrefab: {fileID: 2650546030543125950, guid: 25b5972f35507433a9d92f265948a85d, type: 3}

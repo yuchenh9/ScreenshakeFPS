@@ -30,22 +30,38 @@ public class Bullet : MonoBehaviour
         _timer -= Time.deltaTime;
         if (_timer <= 0) ReturnToPool();
     }
-
-    private void OnTriggerEnter(Collider other)
+private void OnTriggerEnter(Collider other)
     {
+        // 1. 播放爆炸特效
         PlayExplosion();
 
-        enemyController enemy = other.GetComponent<enemyController>();
-        if (enemy != null)
+        // --- 核心修改：范围杀伤逻辑 ---
+        float explosionRadius = 7f;  // 爆炸半径
+        float explosionDamage = 10f; // 爆炸伤害
+
+        // 获取爆炸中心点周围的所有碰撞体
+        Collider[] colliders = Physics.OverlapSphere(transform.position, explosionRadius);
+
+        foreach (Collider hit in colliders)
         {
-            // --- 关键修改：获取子弹飞行方向并传入 ---
-            Vector3 hitDirection = _rb.linearVelocity.normalized;
-            // 如果是射线检测先一步杀死了敌人，这里可能已经取不到速度，可以改用 transform.forward
-            if (hitDirection == Vector3.zero) hitDirection = transform.forward;
-            
-            enemy.TakeDamage(25f, hitDirection);
+            enemyController enemy = hit.GetComponent<enemyController>();
+            if (enemy != null)
+            {
+                // 计算爆炸对该敌人的推力方向：从爆炸中心指向敌人
+                Vector3 explodeDirection = (hit.transform.position - transform.position).normalized;
+                
+                // 为了让喷溅效果更真实，可以混合一部分子弹原本的飞行惯性
+                Vector3 bulletDir = _rb.linearVelocity.normalized;
+                if (bulletDir == Vector3.zero) bulletDir = transform.forward;
+                
+                // 最终混合方向（70%爆炸推开 + 30%子弹惯性）
+                Vector3 finalHitDir = Vector3.Lerp(explodeDirection, bulletDir, 0.3f);
+
+                enemy.TakeDamage(explosionDamage, finalHitDir);
+            }
         }
 
+        // 3. 回收子弹
         ReturnToPool();
     }
 

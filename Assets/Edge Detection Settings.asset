@@ -48,8 +48,8 @@ MonoBehaviour:
   distanceScaleStart: 100
   distanceScaleDistance: 10
   distanceScaleMin: 0.1
-  scaleWithResolution: 0
-  referenceResolution: 0
+  scaleWithResolution: 1
+  referenceResolution: 2
   customResolution: 0
   distortEdges: 0
   distortionStepRate: 0

@@ -62,22 +62,26 @@ public void TakeDamage(float damage, Vector3 hitDirection) // 增加方向参数
 // 修改 Splash 接收方向
 public void Splash(Vector3 direction)
 {
-    // 改动：不再在这里实例化，而是直接叫池子去生成
+    // 1. 生成碎肉
     if (GibsPool.Instance != null)
     {
         GibsPool.Instance.SpawnGibs(transform.position, direction);
     }
-        // 3. 在地面生成一滩血 (贴花)
-        RaycastHit hit;
-        if (Physics.Raycast(transform.position, Vector3.down, out hit, 5f))
-        {
-            // 贴合地面角度生成血液
-            //Instantiate(bloodSplatPrefab, hit.point + new Vector3(0, 0.01f, 0), Quaternion.LookRotation(hit.normal));
-        }
 
-        // 4. 销毁原本的敌人模型
-        //Destroy(gameObject);
+    // 2. 射线检测：顺着子弹方向稍微向下偏一点
+    RaycastHit hit;
+    // 计算喷溅向量：子弹方向 + 一定的重力下坠方向
+    Vector3 splashDir = (direction.normalized + Vector3.down * 0.5f).normalized;
+
+    if (Physics.Raycast(transform.position, splashDir, out hit, 10f))
+    {
+        if (BloodDecalPool.Instance != null)
+        {
+            // 将子弹方向传入，用于旋转和拉长贴花
+            BloodDecalPool.Instance.SpawnSlantedDecal(hit.point, hit.normal, direction);
+        }
     }
+}
 
     // 如果敌人碰到玩家也可以销毁（示例）
     private void OnCollisionEnter(Collision collision)

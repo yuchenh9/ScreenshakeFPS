@@ -1,22 +1,25 @@
 using UnityEngine;
-using UnityEngine.InputSystem; // Added for Mouse.current
+using UnityEngine.InputSystem;
 using System.Collections;
 
 public class aimRecoil : MonoBehaviour
 {
     [Header("Recoil Settings")]
-    public Transform targetPosition; // The "Recoil Point" transform
-    public float recoilDuration = 0.1f;
-    public float returnDuration = 0.2f;
+    public Transform targetPosition; 
+    public float recoilDuration = 0.05f; // 连发时建议缩短时间
+    public float returnDuration = 0.1f;
     public AnimationCurve recoilCurve;
     public AnimationCurve returnCurve;
     
     private Vector3 originalLocalPos;
     private Coroutine recoilCoroutine;
     
+    [Header("Firing Settings")]
+    public float fireRate = 0.1f; 
+    private float nextFireTime = 0f;
+
     void Start()
     {
-        // Record the gun's starting local position
         originalLocalPos = transform.localPosition;
     }
 
@@ -27,47 +30,56 @@ public class aimRecoil : MonoBehaviour
 
     void ClickHandler()
     {
-        // Ensure you are using the Input System Package
-        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+        if(gameStat.Instance.isPaused) return;
+
+        if (Mouse.current != null && Mouse.current.leftButton.isPressed)
         {
-            Fire();
+            if (Time.time >= nextFireTime)
+            {
+                Fire();
+                nextFireTime = Time.time + fireRate;
+            }
         }
     }
     
     public void Fire()
     {
+        // 关键点：停止旧的协程。这会连带停止该协程内正在执行的逻辑
         if (recoilCoroutine != null)
         {
             StopCoroutine(recoilCoroutine);
         }
-        recoilCoroutine = StartCoroutine(RecoilAnimation());
+        recoilCoroutine = StartCoroutine(FullRecoilSequence());
     }
     
-    IEnumerator RecoilAnimation()
+    // 将两个阶段合并为一个协程，确保一次 Stop 就全部干净了
+    IEnumerator FullRecoilSequence()
     {
-        // Move towards the target transform's local position
-        yield return StartCoroutine(MovePosition(targetPosition.localPosition, recoilDuration, recoilCurve));
-        
-        // Return to the original local position
-        yield return StartCoroutine(MovePosition(originalLocalPos, returnDuration, returnCurve));
-    }
-    
-    IEnumerator MovePosition(Vector3 targetPos, float time, AnimationCurve curve)
-    {
-        Vector3 startPos = transform.localPosition;
+        Vector3 currentPos = transform.localPosition;
+
+        // 1. 向后退 (Recoil)
         float elapsed = 0f;
-        
-        while (elapsed < time)
+        while (elapsed < recoilDuration)
         {
             elapsed += Time.deltaTime;
-            float t = elapsed / time;
-            float curveValue = curve.Evaluate(t);
-            
-            // Lerp the entire Vector3 (X, Y, and Z)
-            transform.localPosition = Vector3.Lerp(startPos, targetPos, curveValue);
+            float t = recoilCurve.Evaluate(elapsed / recoilDuration);
+            transform.localPosition = Vector3.Lerp(currentPos, targetPosition.localPosition, t);
             yield return null;
         }
-        
-        transform.localPosition = targetPos;
+
+        // 2. 回到初始位置 (Return)
+        // 重新获取当前位置作为起点，防止位置突变
+        Vector3 posAfterRecoil = transform.localPosition;
+        elapsed = 0f;
+        while (elapsed < returnDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = returnCurve.Evaluate(elapsed / returnDuration);
+            transform.localPosition = Vector3.Lerp(posAfterRecoil, originalLocalPos, t);
+            yield return null;
+        }
+
+        transform.localPosition = originalLocalPos;
+        recoilCoroutine = null; // 结束后清空引用
     }
 }

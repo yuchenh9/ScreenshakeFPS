@@ -4,25 +4,35 @@ using UnityEngine.InputSystem;
 
 public class GunRecoil : MonoBehaviour
 {
+    public static GunRecoil Instance;
+
     [Header("Recoil Settings")]
-    // 现在只需设置 Z 轴的后坐力距离，例如 -0.1f
     public float recoilZOffset = -0.1f; 
-    public float recoilDuration = 0.1f;
-    public float returnDuration = 0.2f;
+    public float recoilDuration = 0.05f; // 连发时建议缩短，增加打击感
+    public float returnDuration = 0.1f;
     public AnimationCurve recoilCurve;
     public AnimationCurve returnCurve;
     
-    // originalPosition 也不再需要记录 Vector3，只需要记录初始的 Z
+    [Header("Firing Settings")]
+    public float fireRate = 0.1f; // 连发速度
+    private float nextFireTime = 0f;
+
     private float originalZ; 
     private Coroutine recoilCoroutine;
     
     [Header("Audio Settings")]
     public AudioClip fireSound;
     private AudioSource audioSource;
-    
+
+    [Header("VFX Settings")]
+    public ParticleSystem muzzleFlash; 
+
+    void Awake(){
+        Instance = this;
+    }
+
     void Start()
     {
-        // 记录枪支初始的本地 Z 轴坐标
         originalZ = transform.localPosition.z;
         audioSource = GetComponent<AudioSource>();
     }
@@ -33,55 +43,71 @@ public class GunRecoil : MonoBehaviour
 
     void ClickHandler(){
         if(gameStat.Instance.isPaused) return;
-        if(Mouse.current.leftButton.wasPressedThisFrame){
+
+        // 修改点：使用 .isPressed 实现连发
+        if(Mouse.current.leftButton.isPressed )
+        {
+            if (Time.time >= nextFireTime)
+            {
+                Fire();
+                nextFireTime = Time.time + fireRate;
+            }
+        } 
+        else if(Mouse.current.rightButton.wasPressedThisFrame)
+        {
             Fire();
         }
     }
     
     public void Fire()
     {
+        if (muzzleFlash != null)
+        {
+            muzzleFlash.Stop(); 
+            muzzleFlash.Play();
+        }
+
+        // 停止之前的协程，确保后坐力立即重置
         if (recoilCoroutine != null)
         {
             StopCoroutine(recoilCoroutine);
         }
-        recoilCoroutine = StartCoroutine(RecoilAnimation());
+        recoilCoroutine = StartCoroutine(RecoilSequence());
+
         if(audioSource != null && fireSound != null)
-            audioSource.PlayOneShot(fireSound);
+            audioSource.PlayOneShot(fireSound,PlayerController.Instance.volumn);
     }
     
-    IEnumerator RecoilAnimation()
-    {
-        float targetZ = originalZ + recoilZOffset;
-        
-        // 向后退 (Recoil)
-        yield return StartCoroutine(MoveZ(targetZ, recoilDuration, recoilCurve));
-        
-        // 回到初始 Z (Return)
-        yield return StartCoroutine(MoveZ(originalZ, returnDuration, returnCurve));
-    }
-    
-    // 关键修正：这个方法只修改 Z 轴
-    IEnumerator MoveZ(float targetZ, float time, AnimationCurve curve)
+    // 整合为一个协程，解决 StopCoroutine 停止不彻底的问题
+    IEnumerator RecoilSequence()
     {
         float startZ = transform.localPosition.z;
+        float targetZ = originalZ + recoilZOffset;
+
+        // 1. 后退阶段
         float elapsed = 0f;
-        
-        while (elapsed < time)
+        while (elapsed < recoilDuration)
         {
             elapsed += Time.deltaTime;
-            float t = elapsed / time;
-            float curveValue = curve.Evaluate(t);
-            
-            // 获取当前的本地坐标
-            Vector3 currentPos = transform.localPosition;
-            // 只更新 Z 值，X 和 Y 保持不变（由 PlayerController 实时决定）
-            float newZ = Mathf.Lerp(startZ, targetZ, curveValue);
-            
-            transform.localPosition = new Vector3(currentPos.x, currentPos.y, newZ);
+            float t = recoilCurve.Evaluate(elapsed / recoilDuration);
+            float newZ = Mathf.Lerp(startZ, targetZ, t);
+            transform.localPosition = new Vector3(transform.localPosition.x, transform.localPosition.y, newZ);
             yield return null;
         }
-        
-        // 最后确保 Z 轴准确到达目标点，同时不改变 X 和 Y
-        transform.localPosition = new Vector3(transform.localPosition.x, transform.localPosition.y, targetZ);
+
+        // 2. 复位阶段
+        float currentZ = transform.localPosition.z;
+        elapsed = 0f;
+        while (elapsed < returnDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = returnCurve.Evaluate(elapsed / returnDuration);
+            float newZ = Mathf.Lerp(currentZ, originalZ, t);
+            transform.localPosition = new Vector3(transform.localPosition.x, transform.localPosition.y, newZ);
+            yield return null;
+        }
+
+        transform.localPosition = new Vector3(transform.localPosition.x, transform.localPosition.y, originalZ);
+        recoilCoroutine = null;
     }
 }
