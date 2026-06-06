@@ -7,6 +7,7 @@ public class Bullet : MonoBehaviour
     public float lifeTime = 5f;
     private float _timer;
     private Rigidbody _rb;
+    private bool _returned;
 
     [Header("Effects")]
     public ParticleSystem explosionPrefab;
@@ -15,7 +16,11 @@ public class Bullet : MonoBehaviour
 
     void Awake() => _rb = GetComponent<Rigidbody>();
 
-    void OnEnable() => _timer = lifeTime;
+    void OnEnable()
+    {
+        _timer = lifeTime;
+        _returned = false;
+    }
 
     public void Launch(Vector3 direction, float speed) 
     {
@@ -87,6 +92,9 @@ private void OnTriggerEnter(Collider other)
 
     private void ReturnToPool()
     {
+        if (_returned) return;
+        _returned = true;
+
         if (_pool != null) _pool.Release(gameObject);
         else Destroy(gameObject);
     }

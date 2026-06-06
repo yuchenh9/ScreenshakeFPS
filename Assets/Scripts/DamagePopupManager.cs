@@ -22,21 +22,25 @@ public class DamagePopupManager : MonoBehaviour
     {
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
+    }
 
-        // 提前加载资源
-        if (_damageTextPrefab == null)
+    private GameObject GetDamageTextPrefab()
+    {
+        if (_damageTextPrefab != null) return _damageTextPrefab;
+
+        if (resourcesLoader.Instance == null)
         {
-            _damageTextPrefab = resourcesLoader.Instance.Load<GameObject>("DamageText");
+            Debug.LogError("resourcesLoader.Instance is null. Ensure ResourceLoader is in the scene.");
+            return null;
         }
+
+        _damageTextPrefab = resourcesLoader.Instance.Load<GameObject>("DamageText");
+        return _damageTextPrefab;
     }
 
     private void InitPool()
     {
-        // 再次检查资源，防止 Awake 还没走完就调用了
-        if (_damageTextPrefab == null)
-        {
-            _damageTextPrefab = resourcesLoader.Instance.Load<GameObject>("DamageText");
-        }
+        if (GetDamageTextPrefab() == null) return;
 
         _popupPool = new ObjectPool<GameObject>(
             createFunc: CreatePopupObject,
@@ -51,7 +55,10 @@ public class DamagePopupManager : MonoBehaviour
 
     private GameObject CreatePopupObject()
     {
-        GameObject go = Instantiate(_damageTextPrefab);
+        GameObject prefab = GetDamageTextPrefab();
+        if (prefab == null) return null;
+
+        GameObject go = Instantiate(prefab);
         DamageText script = go.GetComponent<DamageText>();
         if (script != null) 
         {
