@@ -66,7 +66,7 @@ public class gameStat : MonoBehaviour
             StartCoroutine(WinSequence());
         }
 
-        if (Keyboard.current.escapeKey.wasPressedThisFrame)
+        if (Keyboard.current.pKey.wasPressedThisFrame)
         {
             TogglePause();
         }
@@ -78,7 +78,7 @@ public class gameStat : MonoBehaviour
         }
 
         if(gameStat.Instance.isPaused && Keyboard.current.qKey.wasPressedThisFrame){
-            gameStat.Instance.QuitGame();
+            //gameStat.Instance.QuitGame();
         }
 
         UpdateTextDisplay();
@@ -103,7 +103,7 @@ public class gameStat : MonoBehaviour
     }
     IEnumerator StartSequence(){
         winPanel.SetActive(true);
-        winText.text = $"制作:黄雨辰\n按WSAD移动\n按鼠标左右键开枪\n按ESC暂停";
+        winText.text = $"制作:黄雨辰\n按WSAD移动\n按鼠标左右键开枪\n按P键暂停";
         yield return new WaitForSeconds(5f);
         winPanel.SetActive(false);
         

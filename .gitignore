@@ -1,0 +1,41 @@
+# Unity Standard GitIgnore
+
+# --- Folders to ignore ---
+Library/
+Temp/
+Obj/
+Build/
+Builds/
+Logs/
+MemoryCaptures/
+UserSettings/
+
+# --- IDE Files ---
+*.csproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.opendb
+*.VC.db
+
+# --- Compiled Assets ---
+*.apk
+*.unitypackage
+*.bundle
+
+# --- OS Files ---
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+desktop.ini
+
+# --- Misc ---
+sysinfo.txt
+crashlytics-build.properties
